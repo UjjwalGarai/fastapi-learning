@@ -1,4 +1,5 @@
 from fastapi import FastAPI
+from pydantic import BaseModel
 
 app = FastAPI()
 
@@ -26,12 +27,22 @@ users = [
  
     ]
 
-@app.get("/user/{user_name}")
-def getUsers(user_name: str, id: int = None):
-    for user in users:
-        if user["Name"] == user_name:
-            user["id"] = id
-            return user
+class Product(BaseModel):
+    id: int
+    name: str
+    price: int
+
+
+@app.post("/user")
+def userCreate(user:dict):
     return {
-        "Message": "User not found"
+        "message": "Data Creation Done",
+        "Data": user
+    }
+
+@app.post("/product")
+def create_product(product:Product):
+    return {
+        "message": "Data Creation Done",
+        "Data": product
     }
