@@ -1,5 +1,7 @@
 # FastAPI Learning
 
-## Notes
+## Response Model
 
-* Query Parameter: It is not associated with url, It passed s a function arguments. It use for additional information
+### Response Validation
+### Hide Sensetive Data
+### Output Formating
