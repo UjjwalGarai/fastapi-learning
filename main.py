@@ -1,23 +1,20 @@
-from fastapi import FastAPI, status, HTTPException
+from fastapi import FastAPI, Header, HTTPException, status, Depends
 
 
 app = FastAPI()
 
-
-@app.post("/usercreation", status_code=status.HTTP_201_CREATED)
-def create_user():
+def verifyToken(token: str = Header(None)):
+    if token != "security-code12345":
+        raise HTTPException(
+            status_code=status.HTTP_424_FAILED_DEPENDENCY,
+            detail="User Unauthorized")
     return {
-        "message": "User data created"
+        "Status": "User Authorized"
     }
 
-
-@app.get("/user/{user_id}", status_code=status.HTTP_200_OK)
-def get_user(user_id: int):
-    if user_id != 1:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail="User not found"
-        )
+@app.get("/user")
+def getUserDetails(token = Depends(verifyToken)):
     return {
-        "message": "User found"
+        "User": "Ujjwal",
+        "token": token
     }

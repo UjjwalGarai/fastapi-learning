@@ -1,159 +1,322 @@
-# HTTP Status Codes
+# Dependency Injection (DI) in FastAPI
 
-HTTP status codes are three-digit numbers returned by a web server to indicate the outcome of a client's request. They help clients understand whether the request was successful, redirected, invalid, or failed due to a server issue.
+## What is Dependency Injection?
 
----
+Dependency Injection (DI) is a design pattern where one function or class receives the resources it needs from an external source instead of creating them itself.
 
-# 🟢 2xx – Success
+In FastAPI, dependencies are injected using the `Depends()` function.
 
-The request was successfully received, understood, and processed.
+A dependency can be:
 
-| Status Code | Description | Common Use Case |
-|-------------|-------------|-----------------|
-| **200 OK** | The request was successfully processed, and the requested data is returned in the response body. | GET, PUT |
-| **201 Created** | The request was successful, and a new resource was created on the server. | POST |
-| **204 No Content** | The request was successful, but the server does not return any response body. | DELETE, PUT |
-
-### Example
-
-```http
-HTTP/1.1 200 OK
-```
-
-```json
-{
-    "message": "User found"
-}
-```
+- Authentication
+- Database connection
+- API key validation
+- JWT token verification
+- Configuration settings
+- Common business logic
+- Logging
 
 ---
 
-# 🔵 3xx – Redirection
+# Why Use Dependency Injection?
 
-The client must perform an additional action to complete the request.
+Without Dependency Injection, you would repeat the same code in every API.
 
-| Status Code | Description | Common Use Case |
-|-------------|-------------|-----------------|
-| **301 Moved Permanently** | The requested resource has permanently moved to a new URL. Browsers update bookmarks and search engines transfer SEO value. | Website migration |
-| **302 Found (Temporary Redirect)** | The resource is temporarily available at another URL. Browsers redirect the request, but search engines do not transfer SEO value. | Temporary maintenance |
-
----
-
-# 🟠 4xx – Client Error
-
-The request contains invalid data or the client is not allowed to access the resource.
-
-| Status Code | Description | Common Use Case |
-|-------------|-------------|-----------------|
-| **400 Bad Request** | The request is malformed or contains invalid data. | Invalid JSON, missing required parameters |
-| **401 Unauthorized** | Authentication is required or the provided credentials are invalid. | Missing or invalid JWT/API Token |
-| **403 Forbidden** | The client is authenticated but does not have permission to access the resource. | Insufficient user permissions |
-| **404 Not Found** | The requested resource could not be found on the server. | Invalid URL or non-existent resource |
-
-### Example
-
-```http
-HTTP/1.1 404 Not Found
-```
-
-```json
-{
-    "detail": "User not found"
-}
-```
-
----
-
-# 🔴 5xx – Server Error
-
-The server encountered an unexpected error while processing the request.
-
-| Status Code | Description | Common Use Case |
-|-------------|-------------|-----------------|
-| **500 Internal Server Error** | A generic server-side error indicating that something unexpected occurred. | Unhandled exception, application bug |
-| **503 Service Unavailable** | The server is temporarily unavailable due to maintenance or high traffic. | Scheduled maintenance, server overload |
-
-### Example
-
-```http
-HTTP/1.1 500 Internal Server Error
-```
-
-```json
-{
-    "detail": "Internal Server Error"
-}
-```
-
----
-
-# Summary Table
-
-| Category | Meaning | Status Codes |
-|----------|---------|--------------|
-| 🟢 **2xx** | Success | 200, 201, 204 |
-| 🔵 **3xx** | Redirection | 301, 302 |
-| 🟠 **4xx** | Client Error | 400, 401, 403, 404 |
-| 🔴 **5xx** | Server Error | 500, 503 |
-
----
-
-# Quick Memory Tips
-
-- **200** → Request successful
-- **201** → Resource created
-- **204** → Success with no response body
-- **301** → Permanent redirect
-- **302** → Temporary redirect
-- **400** → Bad request
-- **401** → Authentication required
-- **403** → Permission denied
-- **404** → Resource not found
-- **500** → Server error
-- **503** → Server temporarily unavailable
-
----
-
-# FastAPI Example
+### Without Dependency Injection
 
 ```python
-from fastapi import FastAPI, HTTPException
+from fastapi import FastAPI
 
 app = FastAPI()
 
-@app.get("/users/{user_id}")
-def get_user(user_id: int):
-    if user_id != 1:
-        raise HTTPException(
-            status_code=404,
-            detail="User not found"
-        )
+@app.get("/users")
+def get_users():
+    token = "abc123"
+    # Validate token
+    return {"message": "Users"}
 
+@app.get("/products")
+def get_products():
+    token = "abc123"
+    # Validate token
+    return {"message": "Products"}
+```
+
+Here, the token validation logic is duplicated.
+
+---
+
+### With Dependency Injection
+
+```python
+from fastapi import FastAPI, Depends
+
+app = FastAPI()
+
+def validate_token():
+    return {"user": "Ujjwal"}
+
+@app.get("/users")
+def get_users(user=Depends(validate_token)):
+    return user
+
+@app.get("/products")
+def get_products(user=Depends(validate_token)):
+    return user
+```
+
+The validation logic is written only once and reused across multiple endpoints.
+
+---
+
+# Syntax
+
+```python
+Depends(dependency_function)
+```
+
+General structure:
+
+```python
+@app.get("/example")
+def example(data=Depends(dependency_function)):
+    return data
+```
+
+---
+
+# How Dependency Injection Works
+
+Suppose you have:
+
+```python
+from fastapi import FastAPI, Depends
+
+app = FastAPI()
+
+def get_user():
     return {
-        "message": "User found"
+        "name": "Ujjwal"
+    }
+
+@app.get("/profile")
+def profile(user=Depends(get_user)):
+    return user
+```
+
+### Request
+
+```
+GET /profile
+```
+
+### Internal Workflow
+
+```
+Client Request
+      │
+      ▼
+FastAPI receives request
+      │
+      ▼
+Depends(get_user)
+      │
+      ▼
+Execute get_user()
+      │
+      ▼
+Return {"name":"Ujjwal"}
+      │
+      ▼
+Pass result to profile()
+      │
+      ▼
+Return response
+```
+
+FastAPI automatically calls the dependency before executing the endpoint.
+
+---
+
+# Dependency with Query Parameters
+
+```python
+from fastapi import FastAPI, Depends
+
+app = FastAPI()
+
+def get_user(name: str):
+    return {
+        "User": name
+    }
+
+@app.get("/home")
+def home(data=Depends(get_user)):
+    return {
+        "Validation": "Pass",
+        "User": data
     }
 ```
 
-### Response (Success)
+### Request
 
-```http
-200 OK
 ```
+GET /home?name=Ujjwal
+```
+
+### Response
 
 ```json
 {
-    "message": "User found"
+    "Validation": "Pass",
+    "User": {
+        "User": "Ujjwal"
+    }
 }
 ```
 
-### Response (Failure)
+---
 
-```http
-404 Not Found
+# Dependency Execution Order
+
+FastAPI always executes dependencies before the endpoint.
+
 ```
+Request
+   │
+   ▼
+Dependency 1
+   │
+   ▼
+Dependency 2
+   │
+   ▼
+Endpoint Function
+   │
+   ▼
+Response
+```
+
+If a dependency raises an exception, the endpoint is never executed.
+
+---
+
+# Dependency Returning a Value
+
+```python
+from fastapi import Depends, FastAPI
+
+app = FastAPI()
+
+def add():
+    return 10 + 20
+
+@app.get("/")
+def home(result=Depends(add)):
+    return {
+        "Answer": result
+    }
+```
+
+Response
 
 ```json
 {
-    "detail": "User not found"
+    "Answer": 30
 }
 ```
+
+---
+
+# Authentication Example
+
+```python
+from fastapi import Depends, HTTPException
+
+def verify_token(token: str):
+    if token != "abc123":
+        raise HTTPException(
+            status_code=401,
+            detail="Invalid Token"
+        )
+
+    return {
+        "username": "Ujjwal"
+    }
+
+@app.get("/dashboard")
+def dashboard(user=Depends(verify_token)):
+    return {
+        "message": "Welcome",
+        "user": user
+    }
+```
+
+FastAPI executes `verify_token()` first.
+
+If the token is invalid:
+
+- The request stops immediately.
+- The endpoint is never executed.
+- A `401 Unauthorized` response is returned.
+
+---
+
+# Common Use Cases
+
+Dependency Injection is commonly used for:
+
+- User Authentication
+- Authorization
+- Database Sessions
+- API Key Validation
+- JWT Token Validation
+- Logging
+- Configuration Management
+- Email Services
+- Caching
+- Shared Business Logic
+
+---
+
+# Advantages
+
+- Eliminates duplicate code
+- Improves code readability
+- Encourages modular design
+- Makes testing easier
+- Simplifies maintenance
+- Promotes code reuse
+- Follows Clean Architecture principles
+
+---
+
+# Best Practices
+
+- Keep dependencies focused on a single responsibility.
+- Avoid placing business logic inside dependencies unless it is shared.
+- Give dependency functions descriptive names.
+- Reuse dependencies whenever possible.
+- Use dependencies for cross-cutting concerns like authentication, logging, and database access.
+
+---
+
+# Summary
+
+| Component | Purpose |
+|-----------|---------|
+| `Depends()` | Declares a dependency |
+| Dependency Function | Executes before the endpoint |
+| Return Value | Passed as an argument to the endpoint |
+| Exception in Dependency | Stops request execution and returns an error response |
+| Main Benefit | Code reuse and separation of concerns |
+
+---
+
+# Key Points
+
+- Dependency Injection allows FastAPI to automatically provide required resources to an endpoint.
+- `Depends()` tells FastAPI which function should run first.
+- The dependency's return value is injected into the endpoint function.
+- Dependencies help avoid duplicate code and improve maintainability.
+- Authentication, database sessions, configuration, and logging are the most common real-world applications of Dependency Injection.
