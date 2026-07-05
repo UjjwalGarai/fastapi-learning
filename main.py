@@ -27,9 +27,10 @@ users = [
     ]
 
 @app.get("/user/{user_name}")
-def getUsers(user_name: str):
+def getUsers(user_name: str, id: int = None):
     for user in users:
         if user["Name"] == user_name:
+            user["id"] = id
             return user
     return {
         "Message": "User not found"

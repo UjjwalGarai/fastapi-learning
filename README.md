@@ -2,4 +2,4 @@
 
 ## Notes
 
-* Dynamic Route /Path Paramater : We use to get specfic record it is associated in route the syntax is `/baseURL/{path_parameter}`
+* Query Parameter: It is not associated with url, It passed s a function arguments. It use for additional information
