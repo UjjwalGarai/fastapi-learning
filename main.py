@@ -26,18 +26,11 @@ users = [
  
     ]
 
-@app.get("/users")
-def getUsers():
-    return users
-
-@app.get("/home")
-def home():
+@app.get("/user/{user_name}")
+def getUsers(user_name: str):
+    for user in users:
+        if user["Name"] == user_name:
+            return user
     return {
-        "Message": "This is a home page"
-    }
-
-@app.get("/about")
-def about():
-    return {
-        "Message": "This is a about page"
+        "Message": "User not found"
     }
