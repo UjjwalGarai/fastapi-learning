@@ -27,22 +27,15 @@ users = [
  
     ]
 
-class Product(BaseModel):
-    id: int
-    name: str
-    price: int
+class Address(BaseModel):
+    city: str
+    pin:int
 
+class User(BaseModel):
+    name: str
+    age:int
+    address:Address
 
 @app.post("/user")
-def userCreate(user:dict):
-    return {
-        "message": "Data Creation Done",
-        "Data": user
-    }
-
-@app.post("/product")
-def create_product(product:Product):
-    return {
-        "message": "Data Creation Done",
-        "Data": product
-    }
+def create_User(user: User):
+    return user
