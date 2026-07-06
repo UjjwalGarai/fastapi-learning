@@ -1,322 +1,85 @@
-# Dependency Injection (DI) in FastAPI
+# Middleware in FastAPI
 
-## What is Dependency Injection?
+## What is Middleware?
 
-Dependency Injection (DI) is a design pattern where one function or class receives the resources it needs from an external source instead of creating them itself.
+Middleware is a function that executes **before** a request reaches an API endpoint and **after** the endpoint returns a response. It acts as an intermediate layer between the client and the FastAPI application.
 
-In FastAPI, dependencies are injected using the `Depends()` function.
-
-A dependency can be:
-
-- Authentication
-- Database connection
-- API key validation
-- JWT token verification
-- Configuration settings
-- Common business logic
-- Logging
+Middleware is commonly used for tasks that should apply to every request, such as logging, authentication, performance monitoring, CORS handling, and adding custom headers.
 
 ---
 
-# Why Use Dependency Injection?
+## Request Flow
 
-Without Dependency Injection, you would repeat the same code in every API.
-
-### Without Dependency Injection
-
-```python
-from fastapi import FastAPI
-
-app = FastAPI()
-
-@app.get("/users")
-def get_users():
-    token = "abc123"
-    # Validate token
-    return {"message": "Users"}
-
-@app.get("/products")
-def get_products():
-    token = "abc123"
-    # Validate token
-    return {"message": "Products"}
-```
-
-Here, the token validation logic is duplicated.
-
----
-
-### With Dependency Injection
-
-```python
-from fastapi import FastAPI, Depends
-
-app = FastAPI()
-
-def validate_token():
-    return {"user": "Ujjwal"}
-
-@app.get("/users")
-def get_users(user=Depends(validate_token)):
-    return user
-
-@app.get("/products")
-def get_products(user=Depends(validate_token)):
-    return user
-```
-
-The validation logic is written only once and reused across multiple endpoints.
-
----
-
-# Syntax
-
-```python
-Depends(dependency_function)
-```
-
-General structure:
-
-```python
-@app.get("/example")
-def example(data=Depends(dependency_function)):
-    return data
-```
-
----
-
-# How Dependency Injection Works
-
-Suppose you have:
-
-```python
-from fastapi import FastAPI, Depends
-
-app = FastAPI()
-
-def get_user():
-    return {
-        "name": "Ujjwal"
-    }
-
-@app.get("/profile")
-def profile(user=Depends(get_user)):
-    return user
-```
-
-### Request
-
-```
-GET /profile
-```
-
-### Internal Workflow
-
-```
+```text
 Client Request
       │
       ▼
-FastAPI receives request
+Middleware (Before Request)
       │
       ▼
-Depends(get_user)
+API Endpoint
       │
       ▼
-Execute get_user()
+Middleware (After Response)
       │
       ▼
-Return {"name":"Ujjwal"}
-      │
-      ▼
-Pass result to profile()
-      │
-      ▼
-Return response
+Client Response
 ```
-
-FastAPI automatically calls the dependency before executing the endpoint.
 
 ---
 
-# Dependency with Query Parameters
+## Syntax
 
 ```python
-from fastapi import FastAPI, Depends
+from fastapi import FastAPI, Request
 
 app = FastAPI()
 
-def get_user(name: str):
-    return {
-        "User": name
-    }
+@app.middleware("http")
+async def custom_middleware(request: Request, call_next):
+    print("Before Request")
 
-@app.get("/home")
-def home(data=Depends(get_user)):
-    return {
-        "Validation": "Pass",
-        "User": data
-    }
+    response = await call_next(request)
+
+    print("After Response")
+
+    return response
 ```
 
-### Request
+### How it Works
 
-```
-GET /home?name=Ujjwal
-```
-
-### Response
-
-```json
-{
-    "Validation": "Pass",
-    "User": {
-        "User": "Ujjwal"
-    }
-}
-```
+1. A client sends a request.
+2. The middleware executes before the API endpoint.
+3. `call_next(request)` forwards the request to the appropriate endpoint.
+4. The endpoint processes the request and returns a response.
+5. The middleware receives the response, performs any additional processing, and returns it to the client.
 
 ---
 
-# Dependency Execution Order
+## Common Use Cases
 
-FastAPI always executes dependencies before the endpoint.
-
-```
-Request
-   │
-   ▼
-Dependency 1
-   │
-   ▼
-Dependency 2
-   │
-   ▼
-Endpoint Function
-   │
-   ▼
-Response
-```
-
-If a dependency raises an exception, the endpoint is never executed.
+- Request and response logging
+- Authentication and authorization
+- Measuring API execution time
+- Adding custom response headers
+- CORS handling
+- Request validation
+- Rate limiting
 
 ---
 
-# Dependency Returning a Value
+## Advantages
 
-```python
-from fastapi import Depends, FastAPI
-
-app = FastAPI()
-
-def add():
-    return 10 + 20
-
-@app.get("/")
-def home(result=Depends(add)):
-    return {
-        "Answer": result
-    }
-```
-
-Response
-
-```json
-{
-    "Answer": 30
-}
-```
+- Executes for every request automatically.
+- Keeps common logic separate from endpoint functions.
+- Reduces duplicate code.
+- Improves application maintainability and readability.
 
 ---
 
-# Authentication Example
+## Key Points
 
-```python
-from fastapi import Depends, HTTPException
-
-def verify_token(token: str):
-    if token != "abc123":
-        raise HTTPException(
-            status_code=401,
-            detail="Invalid Token"
-        )
-
-    return {
-        "username": "Ujjwal"
-    }
-
-@app.get("/dashboard")
-def dashboard(user=Depends(verify_token)):
-    return {
-        "message": "Welcome",
-        "user": user
-    }
-```
-
-FastAPI executes `verify_token()` first.
-
-If the token is invalid:
-
-- The request stops immediately.
-- The endpoint is never executed.
-- A `401 Unauthorized` response is returned.
-
----
-
-# Common Use Cases
-
-Dependency Injection is commonly used for:
-
-- User Authentication
-- Authorization
-- Database Sessions
-- API Key Validation
-- JWT Token Validation
-- Logging
-- Configuration Management
-- Email Services
-- Caching
-- Shared Business Logic
-
----
-
-# Advantages
-
-- Eliminates duplicate code
-- Improves code readability
-- Encourages modular design
-- Makes testing easier
-- Simplifies maintenance
-- Promotes code reuse
-- Follows Clean Architecture principles
-
----
-
-# Best Practices
-
-- Keep dependencies focused on a single responsibility.
-- Avoid placing business logic inside dependencies unless it is shared.
-- Give dependency functions descriptive names.
-- Reuse dependencies whenever possible.
-- Use dependencies for cross-cutting concerns like authentication, logging, and database access.
-
----
-
-# Summary
-
-| Component | Purpose |
-|-----------|---------|
-| `Depends()` | Declares a dependency |
-| Dependency Function | Executes before the endpoint |
-| Return Value | Passed as an argument to the endpoint |
-| Exception in Dependency | Stops request execution and returns an error response |
-| Main Benefit | Code reuse and separation of concerns |
-
----
-
-# Key Points
-
-- Dependency Injection allows FastAPI to automatically provide required resources to an endpoint.
-- `Depends()` tells FastAPI which function should run first.
-- The dependency's return value is injected into the endpoint function.
-- Dependencies help avoid duplicate code and improve maintainability.
-- Authentication, database sessions, configuration, and logging are the most common real-world applications of Dependency Injection.
+- Middleware runs **before and after** every request.
+- `call_next(request)` passes the request to the next component in the request pipeline.
+- Multiple middleware functions execute in the order they are added.
+- Use middleware for application-wide functionality, not endpoint-specific business logic.

@@ -1,20 +1,13 @@
-from fastapi import FastAPI, Header, HTTPException, status, Depends
-
+from fastapi import FastAPI, Request
+from time import time
 
 app = FastAPI()
 
-def verifyToken(token: str = Header(None)):
-    if token != "security-code12345":
-        raise HTTPException(
-            status_code=status.HTTP_424_FAILED_DEPENDENCY,
-            detail="User Unauthorized")
-    return {
-        "Status": "User Authorized"
-    }
-
-@app.get("/user")
-def getUserDetails(token = Depends(verifyToken)):
-    return {
-        "User": "Ujjwal",
-        "token": token
-    }
+@app.middleware("http")
+async def timeTracking(req: Request, call_next):
+    start_time = time()
+    print(start_time)
+    response = await call_next(req)
+    processTime = time() - start_time
+    print (f"Path {req.url.path} \ntime taken: {processTime}")
+    return response
