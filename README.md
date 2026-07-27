@@ -1,85 +1,148 @@
-# Middleware in FastAPI
+# SQLite3 with FastAPI
 
-## What is Middleware?
+## What is SQLite3?
 
-Middleware is a function that executes **before** a request reaches an API endpoint and **after** the endpoint returns a response. It acts as an intermediate layer between the client and the FastAPI application.
-
-Middleware is commonly used for tasks that should apply to every request, such as logging, authentication, performance monitoring, CORS handling, and adding custom headers.
+**SQLite3** is a lightweight, serverless, file-based relational database that comes built into Python. Unlike databases such as PostgreSQL or MySQL, SQLite does not require a separate database server. All data is stored in a single `.db` file, making it an excellent choice for learning, prototyping, and small applications.
 
 ---
 
-## Request Flow
+## Why Use SQLite3?
 
-```text
-Client Request
-      │
-      ▼
-Middleware (Before Request)
-      │
-      ▼
-API Endpoint
-      │
-      ▼
-Middleware (After Response)
-      │
-      ▼
-Client Response
-```
+- No installation or database server required.
+- Built into Python (`sqlite3` module).
+- Easy to configure and use.
+- Stores data in a single database file.
+- Ideal for development, testing, and small projects.
 
 ---
 
-## Syntax
+## Creating a Database Connection
 
 ```python
-from fastapi import FastAPI, Request
+import sqlite3
 
-app = FastAPI()
-
-@app.middleware("http")
-async def custom_middleware(request: Request, call_next):
-    print("Before Request")
-
-    response = await call_next(request)
-
-    print("After Response")
-
-    return response
+conn = sqlite3.connect("test.db", check_same_thread=False)
 ```
 
-### How it Works
+### Explanation
 
-1. A client sends a request.
-2. The middleware executes before the API endpoint.
-3. `call_next(request)` forwards the request to the appropriate endpoint.
-4. The endpoint processes the request and returns a response.
-5. The middleware receives the response, performs any additional processing, and returns it to the client.
+- `test.db` → Creates (or opens) a database file named **test.db**.
+- `check_same_thread=False` → Allows the same database connection to be used across multiple threads, which is useful when working with FastAPI.
 
 ---
 
-## Common Use Cases
+## Creating a Cursor
 
-- Request and response logging
-- Authentication and authorization
-- Measuring API execution time
-- Adding custom response headers
-- CORS handling
-- Request validation
-- Rate limiting
+```python
+cursor = conn.cursor()
+```
+
+A **cursor** is an object used to execute SQL statements such as `CREATE`, `INSERT`, `SELECT`, `UPDATE`, and `DELETE`.
+
+---
+
+## Creating a Table
+
+```python
+cursor.execute("""
+    CREATE TABLE IF NOT EXISTS todos(
+        id INTEGER PRIMARY KEY,
+        TITLE TEXT,
+        STATUS TEXT
+    )
+""")
+```
+
+### Explanation
+
+- `CREATE TABLE` → Creates a new table.
+- `IF NOT EXISTS` → Prevents an error if the table already exists.
+- `id INTEGER PRIMARY KEY` → Unique identifier for each record.
+- `TITLE TEXT` → Stores the todo title.
+- `STATUS TEXT` → Stores the task status (e.g., Pending or Completed).
+
+---
+
+## Saving Changes
+
+```python
+conn.commit()
+```
+
+The `commit()` method permanently saves changes made to the database. Without calling `commit()`, changes such as table creation or data insertion may not be stored.
+
+---
+
+## Complete Example
+
+```python
+from fastapi import FastAPI
+import sqlite3
+
+app = FastAPI(title="SQLite3 Learning")
+
+conn = sqlite3.connect("test.db", check_same_thread=False)
+cursor = conn.cursor()
+
+cursor.execute("""
+    CREATE TABLE IF NOT EXISTS todos(
+        id INTEGER PRIMARY KEY,
+        TITLE TEXT,
+        STATUS TEXT
+    )
+""")
+
+conn.commit()
+```
+
+---
+
+## Workflow
+
+```text
+FastAPI Application
+        │
+        ▼
+Connect to SQLite Database
+        │
+        ▼
+Create Cursor
+        │
+        ▼
+Execute SQL Query
+        │
+        ▼
+Commit Changes
+        │
+        ▼
+Database Ready
+```
 
 ---
 
 ## Advantages
 
-- Executes for every request automatically.
-- Keeps common logic separate from endpoint functions.
-- Reduces duplicate code.
-- Improves application maintainability and readability.
+- Simple and beginner-friendly.
+- No external database server required.
+- Fast for small applications.
+- Easy to integrate with FastAPI.
+- Perfect for learning SQL and database operations.
+
+---
+
+## Limitations
+
+- Not suitable for high-concurrency applications.
+- Limited scalability compared to PostgreSQL or MySQL.
+- Best suited for development, testing, and small projects.
 
 ---
 
 ## Key Points
 
-- Middleware runs **before and after** every request.
-- `call_next(request)` passes the request to the next component in the request pipeline.
-- Multiple middleware functions execute in the order they are added.
-- Use middleware for application-wide functionality, not endpoint-specific business logic.
+- SQLite3 is a built-in Python database.
+- A database connection is created using `sqlite3.connect()`.
+- A cursor executes SQL statements.
+- `CREATE TABLE IF NOT EXISTS` creates a table only if it doesn't already exist.
+- `commit()` saves all database changes permanently.
+- SQLite is an excellent choice for learning FastAPI before moving to production databases like PostgreSQL.
