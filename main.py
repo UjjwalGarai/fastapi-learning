@@ -1,83 +1,25 @@
-from sqlalchemy import create_engine, Column, String, Integer
-from sqlalchemy.orm import sessionmaker, DeclarativeBase, Session
-from fastapi import FastAPI, Depends, HTTPException
+import asyncio
+import time
 
-app = FastAPI()
+def sync_task(task_id:int):
+    print(f"Sync Task {task_id} Start")
+    time.sleep(2)
+    print(f"Sync Task {task_id} Completed")
 
-DATABASE_URL = "sqlite:///./test.db"
-engine = create_engine(DATABASE_URL, connect_args={
-    "check_same_thread": False
-})
-
-class Base(DeclarativeBase):
-    pass
-
-class Todos(Base):
-    __tablename__ = "todos"
-    id = Column(Integer, primary_key=True, index=True)
-    title = Column(String)
-    status = Column(String)
-
-Base.metadata.create_all(bind=engine)
-
-sessionLocal = sessionmaker(bind=engine)
-
-def get_db():
-    db = sessionLocal()
-    try:
-        yield db
-    finally:
-        db.close()
-
-@app.post("/todo")
-def createTodo(title, db: Session = Depends(get_db)):
-    todo = Todos(title = title, status = "False")
-    db.add(todo)
-    db.commit()
-    db.refresh(todo)
-    return {
-        "Message": "Data save completed",
-        "Data": todo
-    }
-
-@app.get("/todos")
-def get_all_todos(db: Session = Depends(get_db)):
-    todos = db.query(Todos).all()
-    return {
-        "Total Count": len(todos),
-        "Data": todos
-    }
-
-@app.get("/todos/{todo_id}")
-def get_todo(todo_id: int,db: Session = Depends(get_db)):
-    todos = db.query(Todos).filter(Todos.id == todo_id).first()
-    if not todos:
-        raise HTTPException(404, "Todo not found")
-    return {
-        # "Total Count": len(todos),
-        "Data": todos
-    }
-@app.put("/todo/{id}")
-def modify_todo(id: int, title:str, status:str, db: Session = Depends(get_db)):
-    todos = db.query(Todos).filter(Todos.id == id).first()
-    if not todos:
-            raise HTTPException(404, "Todo not found")
-    todos.title = title
-    todos.status = status
-    db.commit()
-    return{
-        "Message": f"id {id} modified"
-    }
-
-@app.delete("/todo/{id}")
-def delete_todo(id: int,db: Session = Depends(get_db)):
-    todos = db.query(Todos).filter(Todos.id == id).first()
-    if not todos:
-            raise HTTPException(404, "Todo not found")
-    db.delete(todos)
-    db.commit()
-    return{
-        "Message": f"id {id} Deleted"
-    }
+sync_task(1)
+sync_task(2)
 
 
+async def async_task(task_id:int):
+    print(f"Async Task {task_id} Start")
+    await asyncio.sleep(2)
+    print(f"Async Task {task_id} Completed")
+
+
+async def main():
+    await asyncio.gather(
+        async_task(1),
+        async_task(2)
+    )
+    
+asyncio.run(main())
